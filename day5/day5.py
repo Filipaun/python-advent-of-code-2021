@@ -213,9 +213,13 @@ def part2():
         print("dunk", collisions_dunk)
     
     else:
-        print(len(collisions_x))
-        print(len(collisions_y))
-        print(len(collisions_xy))
+        print(f"colinear_x : {len(collisions_x)}")
+        print(f"colinear_y : {len(collisions_y)}")
+        print(f"non colinear straight: {len(collisions_xy)}")
+        print(f"isonorm  positive slope: {len(collisions_diag_pos)}")
+        print(f"isonorm  negative slope: {len(collisions_diag_neg)}")
+        print(f"ortho diagonals : {len(collisions_diag)}")
+        print(f"straight/diag intersection : {len(collisions_dunk)}")
 
 
     unique_collisions = collisions_x
