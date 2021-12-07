@@ -1,7 +1,4 @@
 
-import collections
-
-
 def initialize(debug=False):
     if debug is True:
         filename = "day5/test_input.txt"
