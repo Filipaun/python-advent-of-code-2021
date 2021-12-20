@@ -1,46 +1,5 @@
 
-def initialize(debug=False):
-    if debug is True:
-        filename = "day5/test_input.txt"
-    else:
-        filename = "day5/input.txt"
-
-    horizontal = {}
-    vertical = {}
-    diagonal_neg = {}
-    diagonal_pos = {}
-
-    with open(filename) as file:
-        line = file.readline()
-        while line:
-            line_data = [[int(x) for x in point.split(",")] for point in line.strip().split(" -> ")]
-            valid, direction,slope = check_direction(line_data)
-            if valid and direction == "h":
-                if line_data[0][1] in horizontal:
-                    horizontal[line_data[0][1]].append(sorted([line_data[0][0],line_data[1][0]]))
-                else:
-                    horizontal[line_data[0][1]] = [sorted([line_data[0][0],line_data[1][0]])]
-            elif valid and direction == "v":
-                if line_data[0][0] in vertical:
-                    vertical[line_data[0][0]].append(sorted([line_data[0][1],line_data[1][1]]))
-                else:
-                    vertical[line_data[0][0]] = [sorted([line_data[0][1],line_data[1][1]])]
-            elif valid and direction == "x":
-                if slope == 1:
-                    norm = offset_manhattan(line_data[0])
-                    if norm in diagonal_pos:
-                        diagonal_pos[norm].append(sorted([line_data[0][0],line_data[1][0]]))
-                    else:
-                        diagonal_pos[norm] = [sorted([line_data[0][0],line_data[1][0]])]
-                if slope == -1:
-                    norm = manhattan(line_data[0])
-                    if norm in diagonal_neg:
-                        diagonal_neg[norm].append(sorted([line_data[0][0],line_data[1][0]]))
-                    else:
-                        diagonal_neg[norm] = [sorted([line_data[0][0],line_data[1][0]])]
-            line = file.readline()
-    return horizontal, vertical,diagonal_pos,diagonal_neg
-
+# diagonals "hash"
 def manhattan(vector):
     # negative slope: line is up to the right
     return vector[0] + vector[1]
@@ -48,13 +7,68 @@ def manhattan(vector):
 def y_manhattan(m,x):
     return m-x 
 
-
 def offset_manhattan(vector):
     # positve slope: line is down to the right
     return vector[0]-vector[1]
 
 def y_offset_manhattan(m,x):
     return -m+x
+
+# map from key value pair of the line_data dict
+def horizontal_map(key,value):
+    return([value,key])
+
+def vertical_map(key,value):
+    return([key,value])
+
+def diag_pos_map(key,value):
+    return([y_offset_manhattan(key,value),value])
+
+def diag_neg_map(key,value):
+    return([y_manhattan(key,value),value])
+
+# read from file and generate used data structure
+def initialize(debug=False):
+    if debug is True:
+        filename = "day5/test_input.txt"
+    else:
+        filename = "day5/input.txt"
+
+    horizontal = {'line_data':{},'xy_map':horizontal_map}
+    vertical = {'line_data':{},'xy_map':vertical_map}
+    diagonal_neg = {'line_data':{},'xy_map':diag_neg_map}
+    diagonal_pos = {'line_data':{},'xy_map':diag_pos_map}
+
+    with open(filename) as file:
+        line = file.readline()
+        while line:
+            line_data = [[int(x) for x in point.split(",")] for point in line.strip().split(" -> ")]
+            valid, direction,slope = check_direction(line_data)
+            if valid and direction == "h":
+                if line_data[0][1] in horizontal['line_data']:
+                    horizontal['line_data'][line_data[0][1]].append(sorted([line_data[0][0],line_data[1][0]]))
+                else:
+                    horizontal['line_data'][line_data[0][1]] = [sorted([line_data[0][0],line_data[1][0]])]
+            elif valid and direction == "v":
+                if line_data[0][0] in vertical['line_data']:
+                    vertical['line_data'][line_data[0][0]].append(sorted([line_data[0][1],line_data[1][1]]))
+                else:
+                    vertical['line_data'][line_data[0][0]] = [sorted([line_data[0][1],line_data[1][1]])]
+            elif valid and direction == "x":
+                if slope == 1:
+                    norm = offset_manhattan(line_data[0])
+                    if norm in diagonal_pos['line_data']:
+                        diagonal_pos['line_data'][norm].append(sorted([line_data[0][0],line_data[1][0]]))
+                    else:
+                        diagonal_pos['line_data'][norm] = [sorted([line_data[0][0],line_data[1][0]])]
+                if slope == -1:
+                    norm = manhattan(line_data[0])
+                    if norm in diagonal_neg['line_data']:
+                        diagonal_neg['line_data'][norm].append(sorted([line_data[0][0],line_data[1][0]]))
+                    else:
+                        diagonal_neg['line_data'][norm] = [sorted([line_data[0][0],line_data[1][0]])]
+            line = file.readline()
+    return horizontal, vertical,diagonal_pos,diagonal_neg
 
 def check_direction(points):
     if points[0][0] == points[1][0]:
@@ -66,23 +80,20 @@ def check_direction(points):
     else:
         return False,"0",0
 
-def straight_colinear_collisions(directional_lines,type = 0):
+def colinear_collisions(directional_lines):
     collisions = []
     # vertical directional_lines
-    for i,(key,sublist) in enumerate(directional_lines.items()):
+    for i,(key,sublist) in enumerate(directional_lines["line_data"].items()):
         for i in range(len(sublist)):
             for j in range(i+1,len(sublist)):
                 for val in range(max(sublist[i][0], sublist[j][0]), min(sublist[i][1], sublist[j][1])+1):
-                    if type == 0:
-                        collisions.append([key,val])
-                    elif type == 1:
-                        collisions.append([val,key])
+                    collisions.append(directional_lines['xy_map'](key,val))
     return collisions
 
 def straight_non_colinear_collisions(vertical_lines,horizontal_lines):
     collisions = []
-    for i,(key_v,sublist_v) in enumerate(vertical_lines.items()):
-        for j,(key_h,sublist_h) in enumerate(horizontal_lines.items()):
+    for i,(key_v,sublist_v) in enumerate(vertical_lines["line_data"].items()):
+        for j,(key_h,sublist_h) in enumerate(horizontal_lines["line_data"].items()):
             for i_sub_h in range(len(sublist_h)):
                 if (sublist_h[i_sub_h][0] <= key_v and sublist_h[i_sub_h][1] >= key_v):
                     for i_sub_v in range(len(sublist_v)):
@@ -90,23 +101,10 @@ def straight_non_colinear_collisions(vertical_lines,horizontal_lines):
                             collisions.append([key_v,key_h])
     return collisions
 
-def diagonal_colinear_collisions(directional_lines,type):
-    collisions = []
-    # vertical directional_lines
-    for i,(key,sublist) in enumerate(directional_lines.items()):
-        for i in range(len(sublist)):
-            for j in range(i+1,len(sublist)):
-                for val in range(max(sublist[i][0], sublist[j][0]), min(sublist[i][1], sublist[j][1])+1):
-                    if type == 0:
-                        collisions.append([val,key-val])
-                    elif type == 1:
-                        collisions.append([key+val,-key+val])
-    return collisions
-
 def diagonal_non_colinear_collisions(diagonal_pos,diagonal_neg):
     collisions = []
-    for i,(key_pos,sublist_pos) in enumerate(diagonal_pos.items()):
-        for j,(key_neg,sublist_neg) in enumerate(diagonal_neg.items()):
+    for i,(key_pos,sublist_pos) in enumerate(diagonal_pos["line_data"].items()):
+        for j,(key_neg,sublist_neg) in enumerate(diagonal_neg["line_data"].items()):
             for i_sub_neg in range(len(sublist_neg)):
                     for i_sub_pos in range(len(sublist_pos)):
                         cross_x = (key_pos + key_neg)/2
@@ -118,49 +116,47 @@ def diagonal_non_colinear_collisions(diagonal_pos,diagonal_neg):
 def diag_straight_collisions(diagonal_pos,diagonal_neg,vertical,horizontal):
     collsions = []
 
-    for i,(key_pos,sublist_pos) in enumerate(diagonal_pos.items()):
-        for j,(key_v,sublist_v) in enumerate(vertical.items()):
+    for i,(key_pos,sublist_pos) in enumerate(diagonal_pos["line_data"].items()):
+        for j,(key_v,sublist_v) in enumerate(vertical["line_data"].items()):
             for i_sub_pos in range(len(sublist_pos)):
                 if sublist_pos[i_sub_pos][0] <= key_v and sublist_pos[i_sub_pos][1] >= key_v:
-                    y_diag_pos = key_pos+key_v
+                    y_diag_pos = y_offset_manhattan(key_pos,key_v)
                     for j_v in range(len(sublist_v)):
-                        if sublist_v[j_v][0] <= y_diag_pos <= sublist_v[j_v][1]:
+                        if sublist_v[j_v][0] <= y_diag_pos and y_diag_pos <= sublist_v[j_v][1]:
                             collsions.append([key_v,y_diag_pos])
-        for j,(key_h,sublist_h) in enumerate(horizontal.items()):
+        for j,(key_h,sublist_h) in enumerate(horizontal["line_data"].items()):
             for j_h in range(len(sublist_h)):
                 if offset_manhattan([sublist_h[j_h][0],key_h]) <= key_pos and  key_pos <= offset_manhattan([sublist_h[j_h][1],key_h]):
                     for i_sub_pos in range(len(sublist_pos)):
-                        if -key_pos+sublist_pos[i_sub_pos][0] <= key_h and key_h <= -key_pos+sublist_pos[i_sub_pos][1]:
-                            collsions.append([key_pos+key_h,key_h])
+                        if y_offset_manhattan(key_pos,sublist_pos[i_sub_pos][0]) <= key_h and key_h <= y_offset_manhattan(key_pos,sublist_pos[i_sub_pos][1]):
+                            collsions.append([key_h+key_pos,key_h])
 
-    for i,(key_neg,sublist_neg) in enumerate(diagonal_neg.items()):
-        for j,(key_v,sublist_v) in enumerate(vertical.items()):
+    for i,(key_neg,sublist_neg) in enumerate(diagonal_neg["line_data"].items()):
+        for j,(key_v,sublist_v) in enumerate(vertical["line_data"].items()):
             for i_sub_neg in range(len(sublist_neg)):
                 if sublist_neg[i_sub_neg][0] <= key_v and sublist_neg[i_sub_neg][1] >= key_v:
-                    y_diag_neg = key_neg-key_v
+                    y_diag_neg = y_manhattan(key_neg,key_v)
                     for j_v in range(len(sublist_v)):
-                        if sublist_v[j_v][0] <= y_diag_neg <= sublist_v[j_v][1]:
+                        if sublist_v[j_v][0] <= y_diag_neg and y_diag_neg <= sublist_v[j_v][1]:
                             collsions.append([key_v,y_diag_neg])
-        for j,(key_h,sublist_h) in enumerate(horizontal.items()):
+        for j,(key_h,sublist_h) in enumerate(horizontal["line_data"].items()):
             for j_h in range(len(sublist_h)):
                 if manhattan([sublist_h[j_h][0],key_h]) <= key_neg and  key_neg <= manhattan([sublist_h[j_h][1],key_h]):
                     for i_sub_neg in range(len(sublist_neg)):
-                        if key_neg-sublist_neg[i_sub_neg][0] >= key_h and key_h >= key_neg-sublist_neg[i_sub_neg][1]:
+                        if y_manhattan(key_neg,sublist_neg[i_sub_neg][0]) >= key_h and key_h >= y_manhattan(key_neg,sublist_neg[i_sub_neg][1]):
                             collsions.append([key_neg-key_h,key_h])
     return collsions
 
-                
 
-
-
-def part1(debug):
+def part1():
+    debug = True
     horizontal, vertical,_,_ = initialize(debug)
 
     print(f"x : {vertical}")
     print(f"y : {horizontal}")
 
-    collisions_x = straight_colinear_collisions(vertical,0)
-    collisions_y = straight_colinear_collisions(horizontal,1)
+    collisions_x = colinear_collisions(vertical)
+    collisions_y = colinear_collisions(horizontal)
     collisions_xy = straight_non_colinear_collisions(vertical,horizontal)
 
     if debug is True:
@@ -183,18 +179,19 @@ def part1(debug):
             unique_collisions.append(col)
     print(len(unique_collisions))
 
-def part2(debug):
+def part2():
+    debug = False
     horizontal, vertical,diagonal_pos,diagonal_neg = initialize(debug)
 
     
 
 
-    collisions_x = straight_colinear_collisions(vertical,0)
-    collisions_y = straight_colinear_collisions(horizontal,1)
+    collisions_x = colinear_collisions(vertical)
+    collisions_y = colinear_collisions(horizontal)
     collisions_xy = straight_non_colinear_collisions(vertical,horizontal)
 
-    collisions_diag_pos = diagonal_colinear_collisions(diagonal_pos,1)
-    collisions_diag_neg = diagonal_colinear_collisions(diagonal_neg,0)
+    collisions_diag_pos = colinear_collisions(diagonal_pos)
+    collisions_diag_neg = colinear_collisions(diagonal_neg)
     collisions_diag = diagonal_non_colinear_collisions(diagonal_pos,diagonal_neg)
     collisions_dunk = diag_straight_collisions(diagonal_pos,diagonal_neg,vertical,horizontal)
 
@@ -246,5 +243,5 @@ def part2(debug):
 
     return
 
-#part1(True)
-part2(False)
+#part1()
+part2()
