@@ -1,3 +1,6 @@
+import numpy as np
+from numpy.core.fromnumeric import std
+
 def init(debug=False):
     if debug:
         filename = "day8/test_input.txt"
@@ -34,6 +37,24 @@ def evaluate_instruction(instruction):
             numbers_dict[8] = val
     pass
 
+def create_segment_matrix(signal_arr):
+    signal_matrix = np.zeros((10,10),dtype=int)
+    
+    for i,pattern in enumerate(signal_arr[0]):
+        for char in pattern:
+            num_val = ord(char)-97
+            signal_matrix[num_val,i] = 1
+    for i in range(10):
+        if sum(signal_matrix[:,i]) == 2:
+            signal_matrix[7,i] = 1
+        elif sum(signal_matrix[:,i]) == 4:
+            signal_matrix[8,i] = 1
+        elif sum(signal_matrix[:,i]) == 7:
+            signal_matrix[9,i] = 1
+    #print(signal_matrix)
+    #print(np.linalg.matrix_rank(signal_matrix))
+    return signal_matrix.T
+    
 def part1(data):
     counter = [0]*5
     for instruction in data:
@@ -43,15 +64,28 @@ def part1(data):
 
 def part2(data):
     output_sum = 0
-    for instructions in data:
-        instructions[0] = [sorted([ord(char)-96 for char in signal]) for signal in instructions[0]]
-        instructions[1] = [sorted([ord(char)-96 for char in signal]) for signal in instructions[1]]
-        #print(instructions)
-        evaluate_instruction(instructions)
-    
-    
+    std_arr = np.array([[1, 0, 1, 1, 0, 1, 1, 1, 1, 1], 
+                        [1, 0, 0, 0, 1, 1, 1, 0, 1, 1], 
+                        [1, 1, 1, 1, 1, 0, 0, 1, 1, 1], 
+                        [0, 0, 1, 1, 1, 1, 1, 0, 1, 1], 
+                        [1, 0, 1, 0, 0, 0, 1, 0, 1, 0], 
+                        [1, 1, 0, 1, 1, 1, 1, 1, 1, 1], 
+                        [1, 0, 1, 1, 0, 1, 1, 0, 1, 1],
+                        [0, 1, 0, 0, 0, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                        [0, 0, 0, 0, 0, 0, 0, 0, 1, 0]])
+    std_arr = std_arr.T
+    std_inv = np.linalg.inv(std_arr)
 
-data = init(False)
+    print(f"Standard matrix: \n {std_arr}")
 
-part1(data)
+    signal_matrix = create_segment_matrix(data[0])
+    print(signal_matrix)
+
+    b = np.arange(1,11).reshape(-1,1)
+    print(signal_matrix@std_inv@b)
+
+data = init(True)
+
+#part1(data)
 part2(data)
